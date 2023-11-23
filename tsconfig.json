@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./",
+    "paths": {
+      "@routes/*": ["src/routes/*"],
+      "@controllers/*": ["src/controllers/*"],
+      "@models/*": ["src/models/*"],
+      "@config/*": ["src/config/*"] // Adjusted path to the 'config' directory outside 'src'
+    },
+    "target": "es6",
+    "module": "commonjs",
+    "lib": ["es2015"],
+
+    "outDir": "./dist",
+    "moduleResolution": "node",
+    "rootDir": "./",
+    "strict": true,
+    "esModuleInterop": true,
+    "typeRoots": ["../node_modules/@types"]
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules"]
+}
