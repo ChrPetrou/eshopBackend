@@ -11,6 +11,7 @@ export interface IUser {
   username: string;
   role: UserRole;
   email: string;
+  isauth: boolean;
   password: string;
   createdAt: Date;
   updatedAt: Date;
@@ -21,6 +22,7 @@ const UserSchema = new Schema<IUser>(
     role: String,
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
+    isauth: { type: Boolean },
   },
   { timestamps: true }
 );

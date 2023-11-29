@@ -31,5 +31,6 @@ const usersService = {
     return bcrypt.compare(password, user.password);
   },
 };
+mailOptions: async (email: string) => {};
 
 export default usersService;

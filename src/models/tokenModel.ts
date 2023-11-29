@@ -5,6 +5,7 @@ export interface IToken {
   token_type: string;
   user: mongoose.Types.ObjectId;
   token: string;
+  code?: string;
   expire: Date;
   createdAt?: Date;
   updatedAt?: Date;
@@ -15,6 +16,7 @@ const TokenSchema = new mongoose.Schema<IToken>(
     token_type: { type: String },
     user: { type: Schema.Types.ObjectId, ref: "User" },
     token: { type: String },
+    code: { type: String },
     expire: { type: Date },
   },
   { timestamps: true }

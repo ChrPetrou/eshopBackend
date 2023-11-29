@@ -6,6 +6,7 @@ import {
   isUserLoggedIn,
   RequestLoggedIn,
 } from "src/middleware/auth.middleware";
+import emailService from "src/services/email.service";
 
 var router = Router();
 
@@ -33,6 +34,8 @@ router.post("/register", async (req: Request, res: Response) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+
 const LoginSchema = Joi.object({
   email: Joi.string().email({
     minDomainSegments: 2,
@@ -57,6 +60,34 @@ router.post("/login", async (req: Request, res: Response) => {
     if (!isPasswordMatching) {
       return res.status(400).json({ message: "Invalid password" });
     }
+
+    const twoFaToken = await tokensService.create2faToken(String(user._id));
+    const emailVerif = await emailService.send2FaEmail(
+      value.email,
+      twoFaToken.code
+    );
+    res.status(200).json({ twoFaToken: twoFaToken.token });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+
+const twoFaSchema = Joi.object({
+  code: Joi.string().required(),
+  token: Joi.string().required(),
+});
+
+router.post("/2fa", async (req, res) => {
+  const { value, error } = twoFaSchema.validate(req.body);
+  if (error) return res.status(400).json({ error: error.details });
+  try {
+    const user = await tokensService.validate2faToken(value.token, value.code);
+
+    if (!user) return res.status(400).json({ message: "Invalid 2fa" });
+
     const refreshToken = await tokensService.createRefreshToken(
       String(user._id)
     );
@@ -67,11 +98,14 @@ router.post("/login", async (req: Request, res: Response) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+
 router.post(
   "/say-hi",
   isUserLoggedIn,
   async (req: RequestLoggedIn, res: Response) => {
     console.log(req.user);
+
     res.status(200).json({ message: "hi" });
   }
 );
