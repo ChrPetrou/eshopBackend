@@ -10,7 +10,7 @@ export const TOKEN_TYPES = Object.freeze({
 });
 
 const REFRESH_TOKEN_DURATION = 1000 * 60 * 60 * 24 * 7; // 7 days
-const TWOFA_TOKEN_DURATION = 1000 * 60 * 5; // 2 mins
+const TWOFA_TOKEN_DURATION = 1000 * 60 * 60; // 5 mins
 
 const tokensService = {
   createRefreshToken: async (
@@ -19,19 +19,28 @@ const tokensService = {
   ): Promise<IToken> => {
     const userExistingTokens = await TokenModel.find({
       user: userId,
-      type: TOKEN_TYPES.refresh_token,
-    }).sort("createdAt");
+      token_type: TOKEN_TYPES.refresh_token,
+    }).sort([["_id", -1]]); // get all items desc by created date.
 
-    // if (userExistingTokens.length > 3) {
-    //   await TokenModel.deleteMany({
-    //     _id: {$in:  }
-    //   })
-    // }
+    if (userExistingTokens.length >= 3) {
+      const latestId = userExistingTokens
+        .slice(2)
+        .map((element, _) => element?._id);
+
+      console.log("---> ", latestId);
+
+      await TokenModel.deleteMany({
+        _id: {
+          $in: latestId,
+        },
+        token_type: TOKEN_TYPES.refresh_token,
+      });
+    }
 
     const token = randomBytes(128).toString("hex");
     const existingToken = await TokenModel.findOne({
       token,
-      type: TOKEN_TYPES.refresh_token,
+      token_type: TOKEN_TYPES.refresh_token,
     });
     console.log(token, existingToken);
 
@@ -39,6 +48,7 @@ const tokensService = {
       if (retry > 3) throw new Error("Too many hits");
       return tokensService.createRefreshToken(userId, retry + 1);
     }
+
     return TokenModel.create({
       token_type: TOKEN_TYPES.refresh_token,
       user: new mongoose.Types.ObjectId(userId),
@@ -46,6 +56,7 @@ const tokensService = {
       token,
     });
   },
+
   validateRefreshToken: async (token: string): Promise<IUser | null> => {
     const authToken: any = await TokenModel.findOne({
       token: token,
@@ -59,6 +70,8 @@ const tokensService = {
     }
     return authToken.user as IUser;
   },
+
+  //based on user_id create a nea 2fa token(only 1 can exist)
   create2faToken: async (
     userId: string,
     retry: number = 0
@@ -68,9 +81,22 @@ const tokensService = {
 
     const existingToken = await TokenModel.findOne({
       token,
-      type: TOKEN_TYPES.twoFa,
+      token_type: TOKEN_TYPES.twoFa,
     });
     console.log(token, existingToken);
+
+    const userExistingTokens = await TokenModel.find({
+      user: userId,
+      token_type: TOKEN_TYPES.twoFa,
+    }).sort("createdAt");
+    console.log(userExistingTokens);
+
+    if (userExistingTokens.length >= 1) {
+      await TokenModel.deleteMany({
+        user: { $in: userId },
+        token_type: TOKEN_TYPES.twoFa,
+      });
+    }
 
     if (!!existingToken) {
       if (retry > 3) throw new Error("Too many hits");
@@ -81,7 +107,7 @@ const tokensService = {
       user: new mongoose.Types.ObjectId(userId),
       expire: new Date(Date.now() + TWOFA_TOKEN_DURATION),
       token,
-      code,
+      code: code.base32,
     }) as Promise<IToken & { code: string }>;
   },
   validate2faToken: async (
