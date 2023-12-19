@@ -1,16 +1,11 @@
-import TokenModel, { IToken } from "@models/tokenModel";
+import TokenModel, { IToken, TOKEN_TYPE } from "@models/tokenModel";
 import { IUser } from "@models/userModel";
 import { randomBytes } from "crypto";
 import mongoose, { HydratedDocument } from "mongoose";
 import speakeasy from "speakeasy";
 
-export const TOKEN_TYPES = Object.freeze({
-  refresh_token: "refresh_token",
-  twoFa: "2fa",
-});
-
 const REFRESH_TOKEN_DURATION = 1000 * 60 * 60 * 24 * 7; // 7 days
-const TWOFA_TOKEN_DURATION = 1000 * 60 * 60; // 5 mins
+const TWOFA_TOKEN_DURATION = 1000 * 60 * 5; // 5 mins
 
 const tokensService = {
   createRefreshToken: async (
@@ -19,7 +14,7 @@ const tokensService = {
   ): Promise<IToken> => {
     const userExistingTokens = await TokenModel.find({
       user: userId,
-      token_type: TOKEN_TYPES.refresh_token,
+      token_type: TOKEN_TYPE.refresh_token,
     }).sort([["_id", -1]]); // get all items desc by created date.
 
     if (userExistingTokens.length >= 3) {
@@ -33,14 +28,14 @@ const tokensService = {
         _id: {
           $in: latestId,
         },
-        token_type: TOKEN_TYPES.refresh_token,
+        token_type: TOKEN_TYPE.refresh_token,
       });
     }
 
     const token = randomBytes(128).toString("hex");
     const existingToken = await TokenModel.findOne({
       token,
-      token_type: TOKEN_TYPES.refresh_token,
+      token_type: TOKEN_TYPE.refresh_token,
     });
     console.log(token, existingToken);
 
@@ -50,7 +45,7 @@ const tokensService = {
     }
 
     return TokenModel.create({
-      token_type: TOKEN_TYPES.refresh_token,
+      token_type: TOKEN_TYPE.refresh_token,
       user: new mongoose.Types.ObjectId(userId),
       expire: new Date(Date.now() + REFRESH_TOKEN_DURATION),
       token,
@@ -60,7 +55,7 @@ const tokensService = {
   validateRefreshToken: async (token: string): Promise<IUser | null> => {
     const authToken: any = await TokenModel.findOne({
       token: token,
-      token_type: TOKEN_TYPES.refresh_token,
+      token_type: TOKEN_TYPE.refresh_token,
     }).populate("user");
     if (!authToken) {
       return null;
@@ -77,24 +72,23 @@ const tokensService = {
     retry: number = 0
   ): Promise<IToken & { code: string }> => {
     const token = randomBytes(128).toString("hex");
-    const code = speakeasy.generateSecret({ length: 6 });
+    const code = speakeasy.generateSecret({ length: 5 });
 
     const existingToken = await TokenModel.findOne({
       token,
-      token_type: TOKEN_TYPES.twoFa,
+      token_type: TOKEN_TYPE.twoFa,
     });
-    console.log(token, existingToken);
 
     const userExistingTokens = await TokenModel.find({
       user: userId,
-      token_type: TOKEN_TYPES.twoFa,
+      token_type: TOKEN_TYPE.twoFa,
     }).sort("createdAt");
     console.log(userExistingTokens);
 
     if (userExistingTokens.length >= 1) {
       await TokenModel.deleteMany({
         user: { $in: userId },
-        token_type: TOKEN_TYPES.twoFa,
+        token_type: TOKEN_TYPE.twoFa,
       });
     }
 
@@ -103,7 +97,7 @@ const tokensService = {
       return tokensService.create2faToken(userId, retry + 1);
     }
     return TokenModel.create({
-      token_type: TOKEN_TYPES.twoFa,
+      token_type: TOKEN_TYPE.twoFa,
       user: new mongoose.Types.ObjectId(userId),
       expire: new Date(Date.now() + TWOFA_TOKEN_DURATION),
       token,
@@ -115,7 +109,7 @@ const tokensService = {
     code: string
   ): Promise<IUser | null> => {
     const authToken: any = await TokenModel.findOne({
-      token_type: TOKEN_TYPES.twoFa,
+      token_type: TOKEN_TYPE.twoFa,
       token: token,
     }).populate("user");
     if (!authToken) {
@@ -125,6 +119,7 @@ const tokensService = {
       return null;
     }
     if (new Date() > authToken.expire) {
+      console.log("hi");
       return null;
     }
     return authToken.user as IUser;

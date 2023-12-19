@@ -66,7 +66,9 @@ router.post("/login", async (req: Request, res: Response) => {
       value.email,
       twoFaToken.code
     );
-    res.status(200).json({ twoFaToken: twoFaToken.token });
+    res
+      .status(200)
+      .json({ type: twoFaToken.token_type, twoFaToken: twoFaToken.token });
   } catch (err) {
     console.log(err);
     res.status(500).json({ message: "Internal server error" });
@@ -104,7 +106,7 @@ router.post(
   "/say-hi",
   isUserLoggedIn,
   async (req: RequestLoggedIn, res: Response) => {
-    console.log(req.user);
+    // console.log(req.user);
 
     res.status(200).json({ message: "hi" });
   }

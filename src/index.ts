@@ -1,10 +1,12 @@
 import express from "express";
 import usersRouter from "@routes/users";
 import { connectDB } from "./config/db";
+import cors from "cors";
 
 const main = async (): Promise<void> => {
   const app = express();
   const port = 4000;
+  app.use(cors());
 
   await connectDB();
   app.use(express.json());

