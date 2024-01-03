@@ -7,6 +7,7 @@ import {
   RequestLoggedIn,
 } from "src/middleware/auth.middleware";
 import emailService from "src/services/email.service";
+import { IUser } from "@models/userModel";
 
 var router = Router();
 
@@ -24,7 +25,7 @@ const registerSchema = Joi.object({
 
 router.post("/register", async (req: Request, res: Response) => {
   const { value, error } = registerSchema.validate(req.body);
-  if (error) return res.send(error.details).status(400);
+  if (error) return res.status(400).send(error.details).status(400);
   try {
     let user = await usersService.createUser(value);
     let refreshToken = await tokensService.createRefreshToken(String(user._id));
@@ -62,10 +63,7 @@ router.post("/login", async (req: Request, res: Response) => {
     }
 
     const twoFaToken = await tokensService.create2faToken(String(user._id));
-    const emailVerif = await emailService.send2FaEmail(
-      value.email,
-      twoFaToken.code
-    );
+    await emailService.send2FaEmail(value.email, twoFaToken.code);
     res
       .status(200)
       .json({ type: twoFaToken.token_type, twoFaToken: twoFaToken.token });
@@ -88,12 +86,18 @@ router.post("/2fa", async (req, res) => {
   try {
     const user = await tokensService.validate2faToken(value.token, value.code);
 
-    if (!user) return res.status(400).json({ message: "Invalid 2fa" });
+    if (!user) {
+      return res.status(400).json({ message: "Invalid 2fa" });
+    } else {
+      const refreshToken = await tokensService.createRefreshToken(
+        String(user._id)
+      );
 
-    const refreshToken = await tokensService.createRefreshToken(
-      String(user._id)
-    );
-    res.status(200).json({ refreshToken: refreshToken.token });
+      res.status(200).json({
+        refreshToken: refreshToken.token,
+        expire: refreshToken.expire,
+      });
+    }
   } catch (err) {
     console.log(err);
     res.status(500).json({ message: "Internal server error" });
@@ -102,13 +106,20 @@ router.post("/2fa", async (req, res) => {
 
 // ---------------------------------------------------------------------------
 
+const tokenSchema = Joi.object({
+  token: Joi.string().required(),
+});
 router.post(
-  "/say-hi",
+  "/get-user",
   isUserLoggedIn,
   async (req: RequestLoggedIn, res: Response) => {
-    // console.log(req.user);
-
-    res.status(200).json({ message: "hi" });
+    const user = req.user;
+    if (user) {
+      const { email, username } = user;
+      res.status(200).json({ user: { email, username } });
+    } else {
+      res.status(404).json({ message: "User not found" });
+    }
   }
 );
 
