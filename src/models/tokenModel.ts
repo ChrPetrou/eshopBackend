@@ -3,6 +3,7 @@ import mongoose, { Schema } from "mongoose";
 export enum TOKEN_TYPE {
   refresh_token = "refresh_token",
   twoFa = "2fa",
+  validate = "validate_token",
 }
 
 export interface IToken {

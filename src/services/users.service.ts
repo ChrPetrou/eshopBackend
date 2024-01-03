@@ -17,6 +17,7 @@ const usersService = {
       username: value.username,
       email: value.email.toLowerCase(),
       password,
+      isauth: false,
     });
   },
   getUserByEmail: async (email: string): Promise<IUser | null> => {
@@ -29,6 +30,14 @@ const usersService = {
     password: string
   ): Promise<boolean> => {
     return bcrypt.compare(password, user.password);
+  },
+  updateUserAuth: async (email: string): Promise<IUser | null> => {
+    return UserModel.findOneAndUpdate(
+      {
+        email,
+      },
+      { isauth: true }
+    );
   },
 };
 
