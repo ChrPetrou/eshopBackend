@@ -18,7 +18,7 @@ const emailService = {
       <p>To complete the sign in/register,enter the verification code below</p>
         <p>Verification code: <strong>${code}</strong></p>
       `;
-
+      //
       const mailOptions = {
         from: process.env.AUTH_EMAIL,
         to: "chrispetrou17@gmail.com",
